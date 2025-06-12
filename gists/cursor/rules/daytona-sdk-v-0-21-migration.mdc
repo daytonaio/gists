@@ -1,0 +1,232 @@
+# Daytona SDK v0.21.0 Migration Guide
+
+## Key Changes Summary
+
+### 1. Images → Snapshots
+A more powerful snapshot abstraction replaces pre-built images.
+
+### 2. New Parameter Types
+`CreateSandboxParams` split into specific types:
+- `CreateSandboxFromImageParams`
+- `CreateSandboxFromSnapshotParams`
+
+### 3. Object Renaming
+`SandboxResources` → `Resources`
+
+### 4. Callback Renaming
+`onImageBuildLogs` → `onSnapshotCreateLogs`
+
+### 5. New Snapshot Service
+Dedicated SDK interface for snapshot management
+
+## TypeScript Migration Patterns
+
+### Creating Snapshots (Replace Image Creation)
+
+**Before (v0.20.2):**
+```typescript
+// Creating a pre-built image
+const imageName = `example:${Date.now()}`;
+const image = Image.debianSlim("3.13")
+await daytona.createImage(imageName, image, { onLogs: console.log });
+
+// Using the pre-built image
+const sandbox = await daytona.create({ image: imageName });
+```
+
+**After (v0.21.0):**
+```typescript
+// Creating a snapshot
+const snapshotName = `example:${Date.now()}`;
+const image = Image.debianSlim("3.13")
+await daytona.snapshot.create(
+  {
+    name: snapshotName,
+    image,
+    resources: {
+      cpu: 1,
+      memory: 1,
+      disk: 3,
+    },
+  },
+  { onLogs: console.log }
+);
+
+// Using the snapshot
+const sandbox = await daytona.create({
+  snapshot: snapshotName,
+});
+```
+
+### Sandbox Creation Parameter Changes
+
+**Before (v0.20.2):**
+```typescript
+// Basic creation
+const sandbox = await daytona.create();
+
+// With image and callback
+const sandbox = await daytona.create(
+  {
+    image: Image.debianSlim("3.12"),
+    resources: {
+      cpu: 2,
+      memory: 4,
+      disk: 20,
+    },
+  },
+  { onImageBuildLogs: console.log }
+);
+```
+
+**After (v0.21.0):**
+```typescript
+// Basic creation (unchanged)
+const sandbox = await daytona.create();
+
+// Creating from image (dynamic snapshot created)
+const sandbox = await daytona.create(
+  {
+    image: Image.debianSlim("3.12"),
+    resources: {
+      cpu: 2,
+      memory: 4,
+      disk: 20,
+    },
+  },
+  {
+    onSnapshotCreateLogs: console.log, // renamed callback
+  }
+);
+
+// Creating from snapshot
+const sandbox = await daytona.create({
+  snapshot: "my-snapshot-name",
+});
+```
+
+### Snapshot Service Operations
+
+**After (v0.21.0):**
+```typescript
+await daytona.snapshot.create(params);
+await daytona.snapshot.list();
+await daytona.snapshot.get(snapshotName);
+await daytona.snapshot.delete(snapshot);
+```
+
+## Python Migration Patterns
+
+### Creating Snapshots (Replace Image Creation)
+
+**Before (v0.20.2):**
+```python
+# Creating a pre-built image
+image_name = f"python-example:{int(time.time())}"
+image = Image.debian_slim("3.12")
+daytona.create_image(image_name, image, on_logs=print)
+
+# Using the pre-built image
+sandbox = daytona.create(CreateSandboxParams(image=image_name))
+```
+
+**After (v0.21.0):**
+```python
+# Creating a snapshot
+snapshot_name = f"python-example:{int(time.time())}"
+image = Image.debian_slim("3.12")
+daytona.snapshot.create(
+    CreateSnapshotParams(
+        name=snapshot_name,
+        image=image,
+        resources=Resources(
+            cpu=1,
+            memory=1,
+            disk=3,
+        ),
+    ),
+    on_logs=print,
+)
+
+# Using the snapshot
+sandbox = daytona.create(
+    CreateSandboxFromSnapshotParams(snapshot=snapshot_name)
+)
+```
+
+### Parameter Class Changes
+
+**Before (v0.20.2):**
+```python
+# Basic creation
+sandbox = daytona.create()
+
+# From image name
+params = CreateSandboxParams(
+    image="ubuntu:22.04"
+)
+sandbox = daytona.create(params)
+
+# From image object
+params = CreateSandboxParams(
+    image=Image.debian_slim("3.12")
+)
+sandbox = daytona.create(params, on_image_build_logs=print)
+
+# With resources
+params = CreateSandboxParams(
+    resources=SandboxResources(cpu=1, memory=1, disk=3),
+)
+sandbox = daytona.create(params)
+```
+
+**After (v0.21.0):**
+```python
+# Basic creation (unchanged)
+sandbox = daytona.create()
+
+# From image string
+params = CreateSandboxFromImageParams(
+    image="ubuntu:22.04",
+    resources=Resources(cpu=1, memory=1, disk=3),
+)
+sandbox = daytona.create(params)
+
+# From image object
+params = CreateSandboxFromImageParams(
+    image=Image.debian_slim("3.12"),
+    resources=Resources(cpu=1, memory=1, disk=3),
+)
+sandbox = daytona.create(params, timeout=150, on_snapshot_create_logs=print)
+
+# Creating from snapshot
+params = CreateSandboxFromSnapshotParams(
+    snapshot="my-snapshot-name",
+)
+sandbox = daytona.create(params)
+```
+
+### Snapshot Service Operations
+
+**After (v0.21.0):**
+```python
+daytona.snapshot.create(params)
+daytona.snapshot.list()
+daytona.snapshot.get(snapshot_name)
+daytona.snapshot.delete(snapshot)
+```
+
+## Migration Checklist
+
+### TypeScript Migration Steps
+- [ ] Replace `daytona.createImage()` → `daytona.snapshot.create()`
+- [ ] Use `CreateSandboxFromImageParams` or `CreateSandboxFromSnapshotParams`
+- [ ] Replace `SandboxResources` → `Resources`
+- [ ] Rename `onImageBuildLogs` → `onSnapshotCreateLogs`
+
+### Python Migration Steps
+- [ ] Replace `daytona.create_image()` → `daytona.snapshot.create()`
+- [ ] Import new classes: `CreateSnapshotParams`, `CreateSandboxFromImageParams`, `CreateSandboxFromSnapshotParams`, `Resources`
+- [ ] Replace `CreateSandboxParams` with appropriate specific class
+- [ ] Replace `SandboxResources` → `Resources`
+- [ ] Rename `on_image_build_logs` → `on_snapshot_create_logs`
