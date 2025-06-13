@@ -1,24 +1,5 @@
 # Daytona SDK v0.21.0 Migration Guide
 
-## Key Changes Summary
-
-### 1. Images → Snapshots
-A more powerful snapshot abstraction replaces pre-built images.
-
-### 2. New Parameter Types
-`CreateSandboxParams` split into specific types:
-- `CreateSandboxFromImageParams`
-- `CreateSandboxFromSnapshotParams`
-
-### 3. Object Renaming
-`SandboxResources` → `Resources`
-
-### 4. Callback Renaming
-`onImageBuildLogs` → `onSnapshotCreateLogs`
-
-### 5. New Snapshot Service
-Dedicated SDK interface for snapshot management
-
 ## TypeScript Migration Patterns
 
 ### Creating Snapshots (Replace Image Creation)
@@ -115,6 +96,106 @@ await daytona.snapshot.get(snapshotName);
 await daytona.snapshot.delete(snapshot);
 ```
 
+### Selecting Target Region
+
+**Before (v0.20.2):**
+```typescript
+const daytona: Daytona = new Daytona({
+    target: SandboxTargetRegion.US
+});
+```
+
+**After (v0.21.0):**
+```typescript
+const daytona: Daytona = new Daytona({
+    target: "us"
+});
+```
+
+### Sandbox Retrieval
+
+**Before (v0.20.2):**
+```typescript
+const sandbox = daytona.getCurrentSandbox(id);
+```
+
+**After (v0.21.0):**
+```typescript
+const sandbox = daytona.get(id);
+```
+
+### Removed Deprecated Aliases for Sandbox Methods
+
+**Before (v0.20.2):**
+```typescript
+const workspace = daytona.getCurrentWorkspace(id);
+
+const dir = workspace.getWorkspaceRootDir();
+
+const lsp = await workspace.createLspServer('typescript', 'workspace/project');
+const symbols = await lsp.workspaceSymbols('TODO');
+
+const info = Workspace.toWorkspaceInfo(apiWorkspace);
+```
+
+**After (v0.21.0):**
+```typescript
+const sandbox = daytona.get(id);
+
+const dir = sandbox.getUserRootDir();
+
+const lsp = await sandbox.createLspServer('typescript', 'workspace/project');
+const symbols = await lsp.sandboxSymbols('TODO');
+
+const info = Sandbox.toSandboxInfo(apiSandbox);
+```
+
+### Flattened Sandbox Properties
+
+**Before (v0.20.2):**
+```typescript
+const state = sandbox.instance.state;
+const autoStopInterval = sandbox.instance.autoStopInterval;
+const domain = sandbox.instance.info?.nodeDomain;
+```
+
+**After (v0.21.0):**
+```typescript
+const state = sandbox.state;
+const autoStopInterval = sandbox.autoStopInterval;
+const domain = sandbox.runnerDomain;
+```
+
+### Refresh Functionality
+
+**Before (v0.20.2):**
+```typescript
+// Get up-to-date sandbox info
+const info = await sandbox.info();
+```
+
+**After (v0.21.0):**
+```typescript
+// Update sandbox with up-to-date info
+await sandbox.refreshData();
+```
+
+### Removed Legacy Sandbox Properties
+
+**Before (v0.20.2):**
+```typescript
+// Valid
+const sandboxName = sandbox.instance.name
+const sandboxClass = sandbox.instance.info?.class
+```
+
+**After (v0.21.0):**
+```typescript
+// Invalid
+const sandboxName = sandbox.name;
+const sandboxClass = sandbox.class
+```
+
 ## Python Migration Patterns
 
 ### Creating Snapshots (Replace Image Creation)
@@ -206,6 +287,112 @@ params = CreateSandboxFromSnapshotParams(
 sandbox = daytona.create(params)
 ```
 
+### Selecting Target Region
+
+**Before (v0.20.2):**
+```python
+config = DaytonaConfig(
+    target=SandboxTargetRegion.EU
+)
+
+daytona = Daytona(config)
+```
+
+**After (v0.21.0):**
+```python
+config = DaytonaConfig(
+    target="eu"
+)
+
+daytona = Daytona(config)
+```
+
+### Sandbox Retrieval
+
+**Before (v0.20.2):**
+```python
+sandbox = daytona.get_current_sandbox(id)
+```
+
+**After (v0.21.0):**
+```python
+sandbox = daytona.get(id)
+```
+
+### Removed Deprecated Aliases for Sandbox Methods
+
+**Before (v0.20.2):**
+```python
+workspace = daytona.get_current_workspace(id)
+
+dir = workspace.get_workspace_root_dir()
+
+lsp = workspace.create_lsp_server("python", "workspace/project")
+symbols = lsp.workspace_symbols("TODO")
+
+workspace.wait_for_workspace_start()
+workspace.wait_for_workspace_stop()
+```
+
+**After (v0.21.0):**
+```python
+sandbox = daytona.get(id)
+
+dir = sandbox.get_user_root_dir()
+
+lsp = sandbox.create_lsp_server("python", "workspace/project")
+symbols = lsp.sandbox_symbols("TODO")
+
+sandbox.wait_for_sandbox_start()
+sandbox.wait_for_sandbox_stop()
+```
+
+### Flattened Sandbox Properties
+
+**Before (v0.20.2):**
+```python
+state = sandbox.instance.state
+auto_stop_interval = sandbox.instance.auto_stop_interval
+domain = sandbox.instance.info.node_domain
+```
+
+**After (v0.21.0):**
+```python
+state = sandbox.state
+auto_stop_interval = sandbox.auto_stop_interval
+domain = sandbox.runner_domain
+```
+
+### Refresh Functionality
+
+**Before (v0.20.2):**
+```python
+# Get up-to-date sandbox info
+info = sandbox.info()
+```
+
+**After (v0.21.0):**
+```python
+# Update sandbox with up-to-date info
+sandbox.refresh_data()
+```
+
+### Removed Legacy Sandbox Properties
+
+**Before (v0.20.2):**
+```python
+# Valid
+name = workspace.instance.name
+class_name = workspace.instance.info.class_name
+```
+
+**After (v0.21.0):**
+```python
+# Invalid
+name = workspace.name
+class_name = workspace.class_name
+```
+
 ### Snapshot Service Operations
 
 **After (v0.21.0):**
@@ -223,6 +410,15 @@ daytona.snapshot.delete(snapshot)
 - [ ] Use `CreateSandboxFromImageParams` or `CreateSandboxFromSnapshotParams`
 - [ ] Replace `SandboxResources` → `Resources`
 - [ ] Rename `onImageBuildLogs` → `onSnapshotCreateLogs`
+- [ ] Replace `SandboxTargetRegion` enum with plain string values
+- [ ] Replace `daytona.getCurrentSandbox(id)` → `daytona.get(id)`
+- [ ] Replace deprecated `daytona.getCurrentWorkspace(id)` → `daytona.get(id)`
+- [ ] Replace `workspace.getWorkspaceRootDir()` → `sandbox.getUserRootDir()`
+- [ ] Replace `lspServer.workspaceSymbols(query)` → `lspServer.sandboxSymbols(query)`
+- [ ] Replace `Workspace.toWorkspaceInfo(apiWorkspace)` → `Sandbox.toSandboxInfo(apiSandbox)`
+- [ ] Update sandbox property access from `sandbox.instance.*` to top-level properties
+- [ ] Remove references to legacy properties (`sandbox.instance.name`, `sandbox.instance.info?.class`)
+- [ ] Replace fetching info with `sandbox.info()` to updating sandbox object directly with `sandbox.refreshData()`
 
 ### Python Migration Steps
 - [ ] Replace `daytona.create_image()` → `daytona.snapshot.create()`
@@ -230,3 +426,13 @@ daytona.snapshot.delete(snapshot)
 - [ ] Replace `CreateSandboxParams` with appropriate specific class
 - [ ] Replace `SandboxResources` → `Resources`
 - [ ] Rename `on_image_build_logs` → `on_snapshot_create_logs`
+- [ ] Replace `SandboxTargetRegion` enum with plain string values
+- [ ] Replace `daytona.get_current_sandbox(id)` → `daytona.get(id)`
+- [ ] Replace deprecated `daytona.get_current_workspace(id)` → `daytona.get(id)`
+- [ ] Replace `workspace.get_workspace_root_dir()` → `sandbox.get_user_root_dir()`
+- [ ] Replace `lsp_server.workspace_symbols(query)` → `lsp_server.sandbox_symbols(query)`
+- [ ] Replace `workspace.wait_for_workspace_start()` → `sandbox.wait_for_sandbox_start()`
+- [ ] Replace `workspace.wait_for_workspace_stop()` → `sandbox.wait_for_sandbox_stop()`
+- [ ] Update sandbox property access from `sandbox.instance.*` to top-level properties
+- [ ] Remove references to legacy properties (`sandbox.instance.name`, `sandbox.instance.info.class_name`)
+- [ ] Replace fetching info with `sandbox.info()` to updating sandbox object directly with `sandbox.refresh_data()`
